@@ -736,18 +736,77 @@ async function captureFullPage() {
   btn.textContent = '⏳';
 
   try {
-    var canvas = await html2canvas(document.body, {
+    // 精确获取内容实际宽高（不含滚动条和多余空白）
+    var el = document.documentElement;
+    var body = document.body;
+    var docWidth = Math.max(
+      body.scrollWidth, body.offsetWidth,
+      el.scrollWidth, el.offsetWidth
+    );
+    var docHeight = Math.max(
+      body.scrollHeight, body.offsetHeight,
+      el.scrollHeight, el.offsetHeight
+    );
+
+    // 限制最大宽度为手机屏宽，避免出现横向空白
+    var captureWidth = Math.min(docWidth, window.innerWidth);
+
+    var canvas = await html2canvas(body, {
       backgroundColor: '#0a0a12',
       scale: 2,
       useCORS: true,
       logging: false,
-      width: document.body.scrollWidth,
-      height: document.body.scrollHeight,
-      windowWidth: document.body.scrollWidth,
-      windowHeight: document.body.scrollHeight
+      width: captureWidth,
+      height: docHeight,
+      windowWidth: captureWidth,
+      windowHeight: docHeight,
+      x: 0,
+      y: 0
     });
 
-    // Convert to blob and copy to clipboard
+    // 裁剪掉右侧可能的空白像素
+    var ctx = canvas.getContext('2d');
+    var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // 从右往左找到最后一个非纯黑像素列
+    var lastCol = canvas.width;
+    for (var x = canvas.width - 1; x >= 0; x--) {
+      var hasContent = false;
+      for (var y = 0; y < canvas.height; y += 4) {
+        var idx = (y * canvas.width + x) * 4;
+        // 检查是否非纯黑（RGB任意通道 > 10 就算有内容）
+        if (imgData.data[idx] > 10 || imgData.data[idx+1] > 10 || imgData.data[idx+2] > 10) {
+          hasContent = true;
+          break;
+        }
+      }
+      if (hasContent) { break; }
+      lastCol = x;
+    }
+    // 从底部往上找最后非纯黑行
+    var lastRow = canvas.height;
+    for (var y = canvas.height - 1; y >= 0; y--) {
+      var hasContent = false;
+      for (var x = 0; x < canvas.width; x += 2) {
+        var idx = (y * canvas.width + x) * 4;
+        if (imgData.data[idx] > 10 || imgData.data[idx+1] > 10 || imgData.data[idx+2] > 10) {
+          hasContent = true;
+          break;
+        }
+      }
+      if (hasContent) { break; }
+      lastRow = y;
+    }
+    // 裁剪到实际内容区域
+    var trimW = lastCol < canvas.width ? lastCol + 2 : canvas.width;
+    var trimH = lastRow < canvas.height ? lastRow + 2 : canvas.height;
+    if (trimW < canvas.width || trimH < canvas.height) {
+      var trimmed = document.createElement('canvas');
+      trimmed.width = trimW;
+      trimmed.height = trimH;
+      trimmed.getContext('2d').drawImage(canvas, 0, 0);
+      canvas = trimmed;
+    }
+
     canvas.toBlob(async function(blob) {
       try {
         await navigator.clipboard.write([
@@ -755,7 +814,6 @@ async function captureFullPage() {
         ]);
         showToast('✅', '已复制到剪贴板', '粘贴即可分享');
       } catch (e) {
-        // Fallback: download as PNG
         var link = document.createElement('a');
         link.download = '北京车展2026.png';
         link.href = canvas.toDataURL('image/png');

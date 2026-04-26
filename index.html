@@ -736,59 +736,91 @@ async function captureFullPage() {
   btn.textContent = '⏳';
 
   try {
-    // 精确获取内容实际宽高（不含滚动条和多余空白）
-    var el = document.documentElement;
-    var body = document.body;
+    // 保存原始滚动位置
+    var origScrollY = window.scrollY;
+
+    // 滚动到页面顶部确保动画触发
+    window.scrollTo(0, 0);
+    await new Promise(r => setTimeout(r, 100));
+
+    // 使用新的 html2canvas 方法：先 clone 节点
+    // 但 html2canvas 本身有 clone 机制，关键是要让所有元素在 clone 中可见
+    // 所以先把页面所有 entrance-anim 的动画清掉，确保全部可见
+    var animEls = document.querySelectorAll('.entrance-anim');
+    var animStyles = [];
+    animEls.forEach(function(el, i) {
+      animStyles[i] = el.style.animationDelay;
+      el.style.animationDelay = '0s';
+      // 强制执行动画（移除然后添加类）
+      el.classList.remove('entrance-anim');
+      void el.offsetHeight; // 强制回流
+      el.classList.add('entrance-anim');
+    });
+
+    // 把页面滚动到最底部触发所有懒渲染
+    window.scrollTo(0, document.body.scrollHeight);
+    await new Promise(r => setTimeout(r, 300));
+    window.scrollTo(0, 0);
+    await new Promise(r => setTimeout(r, 100));
+
+    // 获取文档实际高度
     var docWidth = Math.max(
-      body.scrollWidth, body.offsetWidth,
-      el.scrollWidth, el.offsetWidth
+      document.body.scrollWidth, document.body.offsetWidth,
+      document.documentElement.scrollWidth, document.documentElement.offsetWidth
     );
     var docHeight = Math.max(
-      body.scrollHeight, body.offsetHeight,
-      el.scrollHeight, el.offsetHeight
+      document.body.scrollHeight, document.body.offsetHeight,
+      document.documentElement.scrollHeight, document.documentElement.offsetHeight
     );
 
-    // 限制最大宽度为手机屏宽，避免出现横向空白
-    var captureWidth = Math.min(docWidth, window.innerWidth);
-
-    var canvas = await html2canvas(body, {
+    // 核心方案：将整个 body 截图
+    // 使用 onclone 回调确保 clone 中所有元素可见
+    var canvas = await html2canvas(document.body, {
       backgroundColor: '#0a0a12',
       scale: 2,
       useCORS: true,
       logging: false,
-      width: captureWidth,
+      width: window.innerWidth,
       height: docHeight,
-      windowWidth: captureWidth,
+      windowWidth: window.innerWidth,
       windowHeight: docHeight,
       x: 0,
-      y: 0
+      y: 0,
+      onclone: function(doc) {
+        // 在 clone 文档中，移除所有 entrance 动画延迟确保可见
+        var cloneAnim = doc.querySelectorAll('.entrance-anim');
+        cloneAnim.forEach(function(el) {
+          el.style.animationDelay = '0s';
+          el.style.animation = 'none';
+          el.style.opacity = '1';
+        });
+        // 确保 scroll-down 隐藏
+        var scrollDn = doc.querySelector('.scroll-down');
+        if (scrollDn) scrollDn.style.display = 'none';
+        // 修复 body 可能出现的 overflow
+        doc.body.style.overflow = 'visible';
+        doc.documentElement.style.overflow = 'visible';
+      }
     });
 
-    // 裁剪掉右侧可能的空白像素
+    // 恢复样式
+    animEls.forEach(function(el, i) {
+      el.style.animationDelay = animStyles[i] || '';
+    });
+
+    // 恢复滚动位置
+    window.scrollTo(0, origScrollY);
+
+    // 裁剪掉底部纯黑空白
     var ctx = canvas.getContext('2d');
     var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    // 从右往左找到最后一个非纯黑像素列
-    var lastCol = canvas.width;
-    for (var x = canvas.width - 1; x >= 0; x--) {
-      var hasContent = false;
-      for (var y = 0; y < canvas.height; y += 4) {
-        var idx = (y * canvas.width + x) * 4;
-        // 检查是否非纯黑（RGB任意通道 > 10 就算有内容）
-        if (imgData.data[idx] > 10 || imgData.data[idx+1] > 10 || imgData.data[idx+2] > 10) {
-          hasContent = true;
-          break;
-        }
-      }
-      if (hasContent) { break; }
-      lastCol = x;
-    }
-    // 从底部往上找最后非纯黑行
+    // 从下往上找最后非纯黑行
     var lastRow = canvas.height;
-    for (var y = canvas.height - 1; y >= 0; y--) {
+    for (var y = canvas.height - 1; y >= 0; y -= 2) {
       var hasContent = false;
       for (var x = 0; x < canvas.width; x += 2) {
         var idx = (y * canvas.width + x) * 4;
-        if (imgData.data[idx] > 10 || imgData.data[idx+1] > 10 || imgData.data[idx+2] > 10) {
+        if (imgData.data[idx] > 15 || imgData.data[idx+1] > 15 || imgData.data[idx+2] > 15) {
           hasContent = true;
           break;
         }
@@ -796,13 +828,10 @@ async function captureFullPage() {
       if (hasContent) { break; }
       lastRow = y;
     }
-    // 裁剪到实际内容区域
-    var trimW = lastCol < canvas.width ? lastCol + 2 : canvas.width;
-    var trimH = lastRow < canvas.height ? lastRow + 2 : canvas.height;
-    if (trimW < canvas.width || trimH < canvas.height) {
+    if (lastRow < canvas.height) {
       var trimmed = document.createElement('canvas');
-      trimmed.width = trimW;
-      trimmed.height = trimH;
+      trimmed.width = canvas.width;
+      trimmed.height = lastRow + 2;
       trimmed.getContext('2d').drawImage(canvas, 0, 0);
       canvas = trimmed;
     }

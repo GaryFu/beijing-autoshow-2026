@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>2026北京车展 · 新车情报</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+    background: #0a0a12;
+    color: #fff;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #0a0a12 0%, #1a1a3e 40%, #2d1b4e 70%, #0a0a12 100%);
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(255,100,0,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 50%, rgba(0,150,255,0.08) 0%, transparent 50%);
+    animation: heroGlow 8s ease-in-out infinite alternate;
+  }
+  @keyframes heroGlow {
+    0% { transform: translate(0,0) rotate(0deg); }
+    100% { transform: translate(-30px,-20px) rotate(5deg); }
+  }
+  .hero * { position: relative; z-index: 1; }
+  .hero-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff6b35, #ff2e63);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 18px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+  }
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ff6b35, #ffd93d, #6bcbff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+    line-height: 1.2;
+  }
+  .hero .sub {
+    font-size: 18px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 30px;
+    letter-spacing: 4px;
+  }
+  .hero .info-row {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+  }
+  .hero .info-row span { display: flex; align-items: center; gap: 6px; }
+  .hero .scroll-down {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: bounce 2s infinite;
+    color: rgba(255,255,255,0.4);
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  @keyframes bounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-10px); } }
+
+  /* Section */
+  .section {
+    padding: 60px 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .section-title {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title .emoji { font-size: 32px; }
+  .section-sub {
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* Stat cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+  .stat-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+  .stat-card .num {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ff6b35, #ffd93d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-card .label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+  }
+
+  /* Car card */
+  .car-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s;
+  }
+  .car-card:active { transform: scale(0.98); }
+  .car-card .car-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  .car-card .car-name {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .car-card .car-brand {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 2px;
+  }
+  .car-card .car-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: rgba(255,107,53,0.2);
+    color: #ff6b35;
+    white-space: nowrap;
+  }
+  .car-card .car-tag.preview { background: rgba(0,200,150,0.2); color: #00c896; }
+  .car-card .car-tag.launch { background: rgba(100,150,255,0.2); color: #6496ff; }
+  .car-card .car-desc {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.7;
+  }
+  .car-card .car-desc strong { color: #ffd93d; }
+
+  /* Car visual */
+  .car-visual {
+    width: 100%;
+    height: 160px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .car-visual .car-icon { position: relative; z-index: 1; filter: drop-shadow(0 4px 12px rgba(255,255,255,0.2)); }
+  .car-visual::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+    background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);
+  }
+
+  /* Highlight */
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(255,107,53,0.1), rgba(255,217,61,0.05));
+    border: 1px solid rgba(255,107,53,0.2);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .highlight-box .h-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffd93d;
+    margin-bottom: 8px;
+  }
+  .highlight-box .h-content {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.7;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(255,255,255,0.3);
+    font-size: 12px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  /* Gradient backgrounds for car cards */
+  .bg-byd { background: linear-gradient(135deg, rgba(46,125,50,0.15), rgba(0,0,0,0.3)); }
+  .bg-ideal { background: linear-gradient(135deg, rgba(0,100,200,0.12), rgba(0,0,0,0.3)); }
+  .bg-volkswagen { background: linear-gradient(135deg, rgba(0,80,160,0.12), rgba(0,0,0,0.3)); }
+  .bg-audi { background: linear-gradient(135deg, rgba(200,0,0,0.12), rgba(0,0,0,0.3)); }
+  .bg-bmw { background: linear-gradient(135deg, rgba(0,100,200,0.12), rgba(0,0,0,0.3)); }
+  .bg-benz { background: linear-gradient(135deg, rgba(0,100,150,0.12), rgba(0,0,0,0.3)); }
+  .bg-smart { background: linear-gradient(135deg, rgba(255,100,0,0.12), rgba(0,0,0,0.3)); }
+  .bg-zeekr { background: linear-gradient(135deg, rgba(0,200,255,0.12), rgba(0,0,0,0.3)); }
+  .bg-link { background: linear-gradient(135deg, rgba(150,0,255,0.12), rgba(0,0,0,0.3)); }
+  .bg-cadillac { background: linear-gradient(135deg, rgba(200,150,0,0.12), rgba(0,0,0,0.3)); }
+  .bg-geely { background: linear-gradient(135deg, rgba(0,150,100,0.12), rgba(0,0,0,0.3)); }
+  .bg-hongqi { background: linear-gradient(135deg, rgba(200,0,0,0.12), rgba(0,0,0,0.3)); }
+  .bg-xpeng { background: linear-gradient(135deg, rgba(0,200,150,0.12), rgba(0,0,0,0.3)); }
+  .bg-nio { background: linear-gradient(135deg, rgba(0,150,200,0.12), rgba(0,0,0,0.3)); }
+  .bg-wenjie { background: linear-gradient(135deg, rgba(200,50,0,0.12), rgba(0,0,0,0.3)); }
+  .bg-xiaomi { background: linear-gradient(135deg, rgba(255,100,0,0.12), rgba(0,0,0,0.3)); }
+
+  /* Loading / entrance */
+  .entrance-anim { animation: fadeUp 0.6s ease-out both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  .entrance-anim:nth-child(1) { animation-delay: 0.1s; }
+  .entrance-anim:nth-child(2) { animation-delay: 0.2s; }
+  .entrance-anim:nth-child(3) { animation-delay: 0.3s; }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 30px 0;
+    color: rgba(255,255,255,0.2);
+    font-size: 12px;
+  }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent); }
+
+  @media (max-width: 480px) {
+    .hero h1 { font-size: 36px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-card .num { font-size: 28px; }
+    .section { padding: 40px 16px; }
+    .section-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">🔥 正在进行中</div>
+  <h1>2026 北京车展</h1>
+  <p class="sub">Auto China 2026 · 领时代，智未来</p>
+  <div class="info-row">
+    <span>📅 2026.4.24 — 5.3</span>
+    <span>📍 北京·顺义馆 / 首都国际会展中心</span>
+  </div>
+  <div class="scroll-down">
+    <span>向下探索</span>
+    <span>↓</span>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="section entrance-anim">
+  <h2 class="section-title"><span class="emoji">📊</span> 车展规模</h2>
+  <p class="section-sub">全球规模最大的汽车盛宴</p>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="num">180+</div><div class="label">首发/预售/上市新车</div></div>
+    <div class="stat-card"><div class="num">1,500</div><div class="label">参展车辆总数</div></div>
+    <div class="stat-card"><div class="num">200+</div><div class="label">全球首发 & 概念车</div></div>
+    <div class="stat-card"><div class="num">10</div><div class="label">展馆 · 双场馆联动</div></div>
+  </div>
+</div>
+
+<!-- Theme highlight -->
+<div class="section">
+  <div class="highlight-box entrance-anim">
+    <div class="h-title">🎯 本届主题：领时代，智未来</div>
+    <div class="h-content">
+      2026北京车展以"领时代，智未来"为主题，汇聚全球主流车企，从自主旗舰到豪华标杆，从纯电智能到硬派越野，覆盖全品类、全价格区间。AI智能驾驶与800V超快充成为本届最热关键词。
+    </div>
+  </div>
+</div>
+
+<!-- 重磅新车 -->
+<div class="section">
+  <h2 class="section-title"><span class="emoji">🚗</span> 重磅新车 · 首发亮相</h2>
+  <p class="section-sub">盘点本届车展最受关注的明星车型</p>
+
+  <!-- 理想L9 Livis -->
+  <div class="car-card bg-ideal entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #001a3a, #003366);">
+      <div class="car-icon">🚙</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">理想 L9 Livis</div>
+        <div class="car-brand">理想汽车 · 大型增程SUV</div>
+      </div>
+      <span class="car-tag launch">首发亮相</span>
+    </div>
+    <div class="car-desc">
+      <strong>Livis版</strong>配备双颗5nm马赫100芯片，双芯片协同算力<strong>2560 TOPS</strong>，搭载4颗激光雷达。底盘为800V架构全主动悬架系统，集成线控转向+四轮转向+EMB三位一体。5.3米车长转弯半径缩小至<strong>5.5米以内</strong>。
+    </div>
+  </div>
+
+  <!-- 比亚迪大唐 -->
+  <div class="car-card bg-byd entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #0a2a0a, #1a4a1a);">
+      <div class="car-icon">🚗</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">比亚迪 · 大唐</div>
+        <div class="car-brand">比亚迪 · 全新旗舰SUV</div>
+      </div>
+      <span class="car-tag launch">车展首发</span>
+    </div>
+    <div class="car-desc">
+      比亚迪王朝家族全新旗舰SUV。搭载第五代DM技术 + <strong>云辇-Z</strong>智能车身控制系统，纯电续航达210km，综合续航超1300km。采用全新"龙颜美学"设计语言，定位大型6/7座SUV，正面迎战理想L9。
+    </div>
+  </div>
+
+  <!-- 奥迪E7X -->
+  <div class="car-card bg-audi entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #2a0a0a, #4a1a1a);">
+      <div class="car-icon">🏎️</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">奥迪 E7X</div>
+        <div class="car-brand">奥迪 · 纯电旗舰轿车</div>
+      </div>
+      <span class="car-tag launch">车展首发</span>
+    </div>
+    <div class="car-desc">
+      基于PPE纯电平台打造，定位纯电中大型轿车。搭载<strong>800V高压架构</strong>，支持270kW超快充，10%-80%充电仅需<strong>25分钟</strong>。双电机四驱，0-100km/h加速3.9秒，WLTP续航超700km。被视为"纯电版A7"。
+    </div>
+  </div>
+
+  <!-- 宝马iX3 -->
+  <div class="car-card bg-bmw entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #0a1a3a, #1a2a5a);">
+      <div class="car-icon">🚙</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">全新宝马 iX3 长轴距版</div>
+        <div class="car-brand">宝马 · 纯电中型SUV</div>
+      </div>
+      <span class="car-tag launch">车展首发</span>
+    </div>
+    <div class="car-desc">
+      基于Neue Klasse纯电平台打造，<strong>中国专属长轴距</strong>版本。第六代BMW eDrive技术，800V架构，续航最高<strong>800km</strong>（WLTP）。全新一代iDrive系统，采用全景视域桥+中央触控显示屏设计。
+    </div>
+  </div>
+
+  <!-- 奔驰GLC EV -->
+  <div class="car-card bg-benz entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #0a1a2a, #1a2a3a);">
+      <div class="car-icon">🚙</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">全新奔驰 GLC EV 长轴距版</div>
+        <div class="car-brand">奔驰 · 纯电中型SUV</div>
+      </div>
+      <span class="car-tag launch">车展首发</span>
+    </div>
+    <div class="car-desc">
+      基于MB.EA纯电平台，<strong>中国长轴距</strong>专属。800V架构，最大续航超750km。搭载MBUX Superscreen超联屏，支持L2+级智能辅助驾驶。
+    </div>
+  </div>
+
+  <!-- smart精灵6号 -->
+  <div class="car-card bg-smart entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #2a1a0a, #3a2a1a);">
+      <div class="car-icon">🚗</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">smart 精灵6号</div>
+        <div class="car-brand">smart · 豪华掀背轿车</div>
+      </div>
+      <span class="car-tag preview">开启预售 18.99万起</span>
+    </div>
+    <div class="car-desc">
+      smart品牌首款豪华掀背轿车，正式开启预售，预售价<strong>18.99万元</strong>起。奔驰设计+中国智造，定位纯电紧凑型轿跑。同台还首发了<strong>精灵2号</strong>概念车。
+    </div>
+  </div>
+
+</div>
+
+<!-- 智能科技 -->
+<div class="section">
+  <h2 class="section-title"><span class="emoji">🧠</span> 智能科技趋势</h2>
+  <p class="section-sub">从AI大模型到全线控底盘，本届车展的技术亮点</p>
+
+  <div class="highlight-box entrance-anim">
+    <div class="h-title">🤖 AI大模型全面上车</div>
+    <div class="h-content">
+      理想Livis搭载VLA端到端大模型；大众行云智驾首发Momenta R7强化学习世界模型；吉利全域AI 2.0融合Step3.5大模型。AI智能体已成为新车标配。
+    </div>
+  </div>
+
+  <div class="highlight-box entrance-anim">
+    <div class="h-title">⚡ 800V超快充全面普及</div>
+    <div class="h-content">
+      从豪华到主流价位，800V高压平台成为本届车展绝对主流。极氪9X首发全栈900V，充电10%-80%进入20分钟时代。
+    </div>
+  </div>
+
+  <div class="highlight-box entrance-anim">
+    <div class="h-title">🛞 全线控底盘量产元年</div>
+    <div class="h-content">
+      线控转向+四轮转向+EMB电子机械制动三位一体，理想L9 Livis率先量产，5.3米大车转弯半径5.5米。吉利AI数字底盘反应速度仅4ms，比人类快25倍。
+    </div>
+  </div>
+
+  <div class="highlight-box entrance-anim">
+    <div class="h-title">🔮 大众ID.ERA 9X — 合资反击标杆</div>
+    <div class="h-content">
+      上汽大众全新大型增程SUV，全面对标新势力。EA211增程器+370kW双电机，5.6秒破百。192线激光雷达+行云智驾(R7世界模型)，9屏联动+6种空间变换模式。5207/1997/1810mm尺寸。
+    </div>
+  </div>
+</div>
+
+<!-- 自主品牌 -->
+<div class="section">
+  <h2 class="section-title"><span class="emoji">🇨🇳</span> 自主品牌 · 高光时刻</h2>
+  <p class="section-sub">中国车企以AI智驾和超级快充引领全球</p>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="num">极氪8X</div><div class="label">2.96秒破百 · 三电机1030kW</div></div>
+    <div class="stat-card"><div class="num">领克10+</div><div class="label">925马力 · 3秒级加速</div></div>
+    <div class="stat-card entrance-anim"><div class="num">吉利Eva Cab</div><div class="label">中国首台原生Robotaxi</div></div>
+    <div class="stat-card entrance-anim"><div class="num">银河M9黑金</div><div class="label">Thor-U芯片 · 700TOPS</div></div>
+  </div>
+
+  <div class="car-card bg-zeekr entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #001a2a, #002a3a);">
+      <div class="car-icon">🏎️</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">极氪 8X</div>
+        <div class="car-brand">极氪 · 全尺寸电混SUV</div>
+      </div>
+      <span class="car-tag launch">上市 35.68万起</span>
+    </div>
+    <div class="car-desc">
+      <strong>900V 2.0T插混</strong>系统，曜影版三电机1030kW，0-100km/h <strong>2.96秒</strong>！5颗激光雷达+双Thor-U芯片(1400TOPS)。5100/1998/1780mm尺寸，埃尔法级后排伊姆斯躺椅。
+    </div>
+  </div>
+
+  <div class="car-card bg-link entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #1a002a, #2a003a);">
+      <div class="car-icon">🚗</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">领克 10+</div>
+        <div class="car-brand">领克 · 纯电性能轿跑</div>
+      </div>
+      <span class="car-tag preview">预售 20.99-25.99万</span>
+    </div>
+    <div class="car-desc">
+      900V架构，双电机四驱<strong>925马力</strong>，3秒级破百。Thor U智驾芯片，15.4英寸悬浮屏+AMD V2000A座舱芯片。预售20.99万元起，性价比屠夫。
+    </div>
+  </div>
+
+  <div class="car-card bg-wenjie entrance-anim">
+    <div class="car-visual" style="background: linear-gradient(135deg, #2a0a00, #3a1a00);">
+      <div class="car-icon">🚙</div>
+    </div>
+    <div class="car-header">
+      <div>
+        <div class="car-name">问界 M6 · 智界 V9</div>
+        <div class="car-brand">鸿蒙智行 · 双车齐发</div>
+      </div>
+      <span class="car-tag launch">车展首发</span>
+    </div>
+    <div class="car-desc">
+      华为鸿蒙智行阵营双车齐发。<strong>问界M6</strong>定位中大型SUV，搭载华为ADS 4.0智驾系统；<strong>智界V9</strong>为鸿蒙智行首款大型MPV，预计搭载途灵底盘+800V+鸿蒙座舱。
+    </div>
+  </div>
+
+</div>
+
+<!-- 更多新车速览 -->
+<div class="section">
+  <h2 class="section-title"><span class="emoji">⚡</span> 更多新车速览</h2>
+  <p class="section-sub">还有这些值得关注的新车</p>
+
+  <div class="car-card bg-hongqi entrance-anim">
+    <div class="car-header">
+      <div>
+        <div class="car-name" style="font-size:17px;">红旗 · 全新纯电旗舰</div>
+        <div class="car-brand">红旗 · 金葵花家族旗舰</div>
+      </div>
+      <span class="car-tag launch">首发</span>
+    </div>
+    <div class="car-desc">红旗全新纯电旗舰轿车/SUV，金葵花家族顶级设计，中国式新高尚精致主义。</div>
+  </div>
+
+  <div class="car-card bg-cadillac entrance-anim">
+    <div class="car-header">
+      <div>
+        <div class="car-name" style="font-size:17px;">凯迪拉克 凯威德</div>
+        <div class="car-brand">凯迪拉克 · 大型纯电SUV</div>
+      </div>
+      <span class="car-tag launch">上市 46.88万起</span>
+    </div>
+    <div class="car-desc">IQ纯电家族旗舰，5222mm车长，443马力双电机，3.75秒破百，33英寸曲面连屏+23扬声器AKG音响。美式电动豪华新高度。</div>
+  </div>
+
+  <div class="car-card bg-xiaomi entrance-anim">
+    <div class="car-header">
+      <div>
+        <div class="car-name" style="font-size:17px;">小米汽车 · 新消息</div>
+        <div class="car-brand">小米 · 第二款车型预热</div>
+      </div>
+      <span class="car-tag">展台亮相</span>
+    </div>
+    <div class="car-desc">小米汽车SU7 Ultra亮相展台，雷军透露第二款车型（代号MX11）进展顺利，预计年内发布，定位纯电SUV。</div>
+  </div>
+
+  <div class="car-card bg-xpeng entrance-anim">
+    <div class="car-header">
+      <div>
+        <div class="car-name" style="font-size:17px;">小鹏 · 新款车型</div>
+        <div class="car-brand">小鹏汽车</div>
+      </div>
+      <span class="car-tag launch">首发</span>
+    </div>
+    <div class="car-desc">小鹏新车搭载纯视觉智驾方案 + 800V + 5C超充，何小鹏透露年内还有多款新品，含全新G7。</div>
+  </div>
+
+  <div class="car-card bg-nio entrance-anim">
+    <div class="car-header">
+      <div>
+        <div class="car-name" style="font-size:17px;">蔚来 / 乐道 / 萤火虫</div>
+        <div class="car-brand">蔚来全品牌阵容</div>
+      </div>
+      <span class="car-tag launch">展台集结</span>
+    </div>
+    <div class="car-desc">蔚来ET9内饰首秀，搭载自研神玑NX9031芯片。乐道L90首次亮相，萤火虫品牌首款车型同台展出。蔚来全系NT3.0平台。</div>
+  </div>
+</div>
+
+<!-- 参观指南 -->
+<div class="section">
+  <h2 class="section-title"><span class="emoji">📍</span> 参观指南</h2>
+  <p class="section-sub">想去现场？这份攻略请收好</p>
+
+  <div class="highlight-box entrance-anim">
+    <div class="h-title">📅 展期安排</div>
+    <div class="h-content">
+      <strong>媒体日：</strong>4月24-25日<br>
+      <strong>专业观众日：</strong>4月26-27日<br>
+      <strong>公众日：</strong>4月28日-5月3日
+    </div>
+  </div>
+
+  <div class="highlight-box entrance-anim">
+    <div class="h-title">📍 双场馆</div>
+    <div class="h-content">
+      <strong>中国国际展览中心（顺义馆）：</strong>主要整车展馆<br>
+      <strong>首都国际会展中心：</strong>新增展馆，部分零部件及新技术展示<br><br>
+      两馆紧邻，步行可达。
+    </div>
+  </div>
+
+  <div class="highlight-box entrance-anim">
+    <div class="h-title">🚇 交通建议</div>
+    <div class="h-content">
+      地铁15号线"国展站"直达顺义馆。<br>
+      建议公共交通出行，展馆周边停车位紧张。
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  数据来源：汽车之家、Car and Driver、36氪等 · 截至2026年4月26日<br>
+  制作：小龙 🪷😊
+</div>
+
+</body>
+</html>

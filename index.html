@@ -736,91 +736,71 @@ async function captureFullPage() {
   btn.textContent = '⏳';
 
   try {
-    // 保存原始滚动位置
-    var origScrollY = window.scrollY;
+    // 1. 先禁用所有 entrance 动画，让元素直接可见
+    var styleFix = document.createElement('style');
+    styleFix.id = '_captureFix';
+    styleFix.textContent = '.entrance-anim { animation: none !important; opacity: 1 !important; }';
+    document.head.appendChild(styleFix);
 
-    // 滚动到页面顶部确保动画触发
-    window.scrollTo(0, 0);
-    await new Promise(r => setTimeout(r, 100));
+    // 2. 隐藏弹窗按钮和浮动按钮本身
+    var saveWrap = document.querySelector('.save-btn-wrap');
+    if (saveWrap) saveWrap.style.display = 'none';
+    var scrollDn = document.querySelector('.scroll-down');
+    if (scrollDn) scrollDn.style.display = 'none';
 
-    // 使用新的 html2canvas 方法：先 clone 节点
-    // 但 html2canvas 本身有 clone 机制，关键是要让所有元素在 clone 中可见
-    // 所以先把页面所有 entrance-anim 的动画清掉，确保全部可见
-    var animEls = document.querySelectorAll('.entrance-anim');
-    var animStyles = [];
-    animEls.forEach(function(el, i) {
-      animStyles[i] = el.style.animationDelay;
-      el.style.animationDelay = '0s';
-      // 强制执行动画（移除然后添加类）
-      el.classList.remove('entrance-anim');
-      void el.offsetHeight; // 强制回流
-      el.classList.add('entrance-anim');
-    });
+    // 3. 确保 body margin 为 0（html2canvas 会保留 body margin 导致顶部空白）
+    var origBodyMargin = document.body.style.margin;
+    document.body.style.margin = '0';
 
-    // 把页面滚动到最底部触发所有懒渲染
+    // 4. 滚动到底再回顶，触发所有懒渲染
     window.scrollTo(0, document.body.scrollHeight);
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 200));
     window.scrollTo(0, 0);
     await new Promise(r => setTimeout(r, 100));
 
-    // 获取文档实际高度
-    var docWidth = Math.max(
-      document.body.scrollWidth, document.body.offsetWidth,
-      document.documentElement.scrollWidth, document.documentElement.offsetWidth
-    );
-    var docHeight = Math.max(
-      document.body.scrollHeight, document.body.offsetHeight,
-      document.documentElement.scrollHeight, document.documentElement.offsetHeight
+    // 5. 计算真实内容高度（固定宽度 = 390px 移动端）
+    var captureW = 390;  // 固定移动端宽度
+    var captureH = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight
     );
 
-    // 核心方案：将整个 body 截图
-    // 使用 onclone 回调确保 clone 中所有元素可见
-    var canvas = await html2canvas(document.body, {
-      backgroundColor: '#0a0a12',
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: window.innerWidth,
-      height: docHeight,
-      windowWidth: window.innerWidth,
-      windowHeight: docHeight,
-      x: 0,
-      y: 0,
-      onclone: function(doc) {
-        // 在 clone 文档中，移除所有 entrance 动画延迟确保可见
-        var cloneAnim = doc.querySelectorAll('.entrance-anim');
-        cloneAnim.forEach(function(el) {
-          el.style.animationDelay = '0s';
-          el.style.animation = 'none';
-          el.style.opacity = '1';
-        });
-        // 确保 scroll-down 隐藏
-        var scrollDn = doc.querySelector('.scroll-down');
-        if (scrollDn) scrollDn.style.display = 'none';
-        // 修复 body 可能出现的 overflow
-        doc.body.style.overflow = 'visible';
-        doc.documentElement.style.overflow = 'visible';
-      }
-    });
+    // 6. 分段截图拼接（避免 html2canvas 一次性渲染超长内容出问题）
+    var segmentH = window.innerHeight; // 每段 = 一个视口高度
+    var totalSegments = Math.ceil(captureH / segmentH);
+    var fullCanvas = document.createElement('canvas');
+    fullCanvas.width = captureW * 2;  // 2x scale
+    fullCanvas.height = captureH * 2;
+    var fullCtx = fullCanvas.getContext('2d');
 
-    // 恢复样式
-    animEls.forEach(function(el, i) {
-      el.style.animationDelay = animStyles[i] || '';
-    });
+    for (var seg = 0; seg < totalSegments; seg++) {
+      var yStart = seg * segmentH;
+      var segCanvas = await html2canvas(document.body, {
+        backgroundColor: '#0a0a12',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: captureW,
+        height: segmentH,
+        windowWidth: captureW,
+        windowHeight: segmentH,
+        x: 0,
+        y: yStart
+      });
+      fullCtx.drawImage(segCanvas, 0, yStart * 2);
 
-    // 恢复滚动位置
-    window.scrollTo(0, origScrollY);
+      // 更新进度
+      btn.textContent = Math.round((seg + 1) / totalSegments * 100) + '%';
+    }
 
-    // 裁剪掉底部纯黑空白
-    var ctx = canvas.getContext('2d');
-    var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    // 从下往上找最后非纯黑行
-    var lastRow = canvas.height;
-    for (var y = canvas.height - 1; y >= 0; y -= 2) {
+    // 7. 裁剪掉底部纯黑空白
+    var imgData = fullCtx.getImageData(0, 0, fullCanvas.width, fullCanvas.height);
+    var lastRow = fullCanvas.height;
+    for (var y = fullCanvas.height - 1; y >= 0; y -= 2) {
       var hasContent = false;
-      for (var x = 0; x < canvas.width; x += 2) {
-        var idx = (y * canvas.width + x) * 4;
-        if (imgData.data[idx] > 15 || imgData.data[idx+1] > 15 || imgData.data[idx+2] > 15) {
+      for (var x = 0; x < fullCanvas.width; x += 2) {
+        var idx = (y * fullCanvas.width + x) * 4;
+        if (imgData.data[idx] > 10 || imgData.data[idx+1] > 10 || imgData.data[idx+2] > 10) {
           hasContent = true;
           break;
         }
@@ -828,15 +808,23 @@ async function captureFullPage() {
       if (hasContent) { break; }
       lastRow = y;
     }
-    if (lastRow < canvas.height) {
+    if (lastRow < fullCanvas.height) {
       var trimmed = document.createElement('canvas');
-      trimmed.width = canvas.width;
+      trimmed.width = fullCanvas.width;
       trimmed.height = lastRow + 2;
-      trimmed.getContext('2d').drawImage(canvas, 0, 0);
-      canvas = trimmed;
+      trimmed.getContext('2d').drawImage(fullCanvas, 0, 0);
+      fullCanvas = trimmed;
     }
 
-    canvas.toBlob(async function(blob) {
+    // 8. 恢复页面
+    document.head.removeChild(styleFix);
+    document.body.style.margin = origBodyMargin;
+    if (saveWrap) saveWrap.style.display = '';
+    if (scrollDn) scrollDn.style.display = '';
+    window.scrollTo(0, 0);
+
+    // 9. 保存/复制
+    fullCanvas.toBlob(async function(blob) {
       try {
         await navigator.clipboard.write([
           new ClipboardItem({ 'image/png': blob })
@@ -845,7 +833,7 @@ async function captureFullPage() {
       } catch (e) {
         var link = document.createElement('a');
         link.download = '北京车展2026.png';
-        link.href = canvas.toDataURL('image/png');
+        link.href = fullCanvas.toDataURL('image/png');
         link.click();
         showToast('📥', '长图已下载', '剪贴板不可用，已保存为图片文件');
       }

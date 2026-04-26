@@ -704,7 +704,7 @@
 
 <!-- Save button -->
 <div class="save-btn-wrap">
-  <button class="save-btn" id="saveBtn" onclick="captureFullPage()">📷</button>
+  <button class="save-btn" id="saveBtn" onclick="checkLibs(captureFullPage)">📷</button>
   <div class="save-btn-label">保存长图</div>
 </div>
 
@@ -717,6 +717,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.2.1/dist/dom-to-image-more.min.js"></script>
 <script>
 function showToast(icon, text, sub) {
   var t = document.getElementById('toast');
@@ -730,123 +731,183 @@ function hideToast() {
   document.getElementById('toast').classList.remove('show');
 }
 
-async function captureFullPage() {
+function captureFullPage() {
   var btn = document.getElementById('saveBtn');
   btn.classList.add('saving');
   btn.textContent = '⏳';
 
-  try {
-    // 方案：克隆整个 body 到一个离屏容器，统一渲染后截图
-    // 这样 html2canvas 只需要面对一个完整的内容块，不需要分段
+  // 方案：在当前页面直接截图（不克隆），使用 html2canvas 的 onclone 回调
+  // 步骤：
+  // 1. 先禁用所有动画，确保所有元素可见
+  // 2. 临时隐藏浮动按钮
+  // 3. 滚动到底部再回顶触发所有渲染
+  // 4. 截图整个 body
+  
+  var origScroll = window.scrollY;
+  
+  // 注入临时样式禁用动画
+  var fixStyle = document.createElement('style');
+  fixStyle.id = '_capFix';
+  fixStyle.textContent = '.entrance-anim { animation: none !important; opacity: 1 !important; transform: none !important; } .save-btn-wrap { display: none !important; } .scroll-down { display: none !important; } #toast { display: none !important; }';
+  document.head.appendChild(fixStyle);
+  
+  // 拍平 body 边距
+  var origMargin = document.body.style.margin;
+  var origPad = document.body.style.padding;
+  document.body.style.margin = '0';
+  document.body.style.padding = '0';
+  
+  // 滚动触发渲染
+  window.scrollTo(0, document.body.scrollHeight);
+  setTimeout(function() {
+    window.scrollTo(0, 0);
     
-    // 克隆 body 内容
-    var clone = document.body.cloneNode(true);
-    
-    // 在 clone 中去掉干扰元素
-    var cloneSaveBtn = clone.querySelector('.save-btn-wrap');
-    if (cloneSaveBtn) cloneSaveBtn.remove();
-    var cloneToast = clone.querySelector('#toast');
-    if (cloneToast) cloneToast.remove();
-    var cloneScroll = clone.querySelector('.scroll-down');
-    if (cloneScroll) cloneScroll.remove();
-    
-    // 移除 clone 中所有 script 标签
-    var scripts = clone.querySelectorAll('script');
-    scripts.forEach(function(s) { s.remove(); });
-    
-    // 移除行内 JS 事件属性
-    clone.querySelectorAll('[onclick]').forEach(function(el) { el.removeAttribute('onclick'); });
-    
-    // 移除所有 entrance 动画
-    var anims = clone.querySelectorAll('.entrance-anim');
-    anims.forEach(function(el) {
-      el.style.animation = 'none';
-      el.style.animationDelay = '0s';
-      el.style.opacity = '1';
-      el.style.transform = 'none';
-    });
-    
-    // 创建离屏容器并填充
-    var container = document.createElement('div');
-    container.id = '_captureContainer';
-    container.style.cssText = 'position:fixed;left:-9999px;top:0;width:390px;background:#0a0a12;overflow:visible;';
-    container.appendChild(clone);
-    document.body.appendChild(container);
-    
-    // 确保所有 entrance 动画在 clone 里也被覆盖
-    var overrideStyle = document.createElement('style');
-    overrideStyle.id = '_captureOverride';
-    overrideStyle.textContent = '#_captureContainer .entrance-anim { animation: none !important; opacity: 1 !important; transform: none !important; }';
-    document.head.appendChild(overrideStyle);
-    
-    // 强制等待浏览器渲染离屏容器
-    await new Promise(r => setTimeout(r, 300));
-    
-    // 一次性截图，只截这个容器
-    var cloneEl = document.getElementById('_captureContainer');
-    var finalH = cloneEl.scrollHeight;
-    
-    var finalCanvas = await html2canvas(cloneEl, {
-      backgroundColor: '#0a0a12',
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: 390,
-      height: finalH,
-      windowWidth: 390,
-      windowHeight: finalH
-    });
-    
-    // 清理
-    document.head.removeChild(overrideStyle);
-    document.body.removeChild(container);
-    
-    // 裁剪底部空白
-    var ctx2 = finalCanvas.getContext('2d');
-    var px2 = ctx2.getImageData(0, 0, finalCanvas.width, finalCanvas.height);
-    var lastRow2 = finalCanvas.height;
-    for (var y = finalCanvas.height - 1; y >= 0; y -= 2) {
+    setTimeout(function() {
+      // 用 dom-to-image-more 截图
+      var node = document.body;
+      var w = node.scrollWidth;
+      var h = node.scrollHeight;
+      
+      domtoimage.toPng(node, {
+        bgColor: '#0a0a12',
+        width: w,
+        height: h,
+        style: {
+          'margin': '0',
+          'padding': '0'
+        },
+        quality: 1,
+        scale: 2
+      })
+      .then(function(dataUrl) {
+        // 成功
+        cleanup();
+        saveOrCopy(dataUrl);
+      })
+      .catch(function(err) {
+        // dom-to-image 失败，降级到 html2canvas
+        console.warn('dom-to-image failed, fallback to html2canvas:', err);
+        
+        html2canvas(node, {
+          backgroundColor: '#0a0a12',
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: w,
+          height: h,
+          windowWidth: w,
+          windowHeight: h,
+          onclone: function(doc) {
+            doc.querySelectorAll('.entrance-anim').forEach(function(el) {
+              el.style.animation = 'none';
+              el.style.opacity = '1';
+            });
+            var sb = doc.querySelector('.save-btn-wrap');
+            if (sb) sb.style.display = 'none';
+            var sd = doc.querySelector('.scroll-down');
+            if (sd) sd.style.display = 'none';
+            doc.body.style.margin = '0';
+            doc.body.style.overflow = 'visible';
+          }
+        })
+        .then(function(canvas) {
+          cleanup();
+          // 裁剪底部空白
+          var trimmed = trimBottom(canvas);
+          saveOrCopy(trimmed.toDataURL('image/png'));
+        })
+        .catch(function(err2) {
+          cleanup();
+          showToast('❌', '截图失败', '请使用手机系统截图功能');
+        });
+      });
+      
+    }, 150);
+  }, 150);
+  
+  function cleanup() {
+    var s = document.getElementById('_capFix');
+    if (s) s.parentNode.removeChild(s);
+    document.body.style.margin = origMargin;
+    document.body.style.padding = origPad;
+    window.scrollTo(0, origScroll);
+    btn.classList.remove('saving');
+    btn.textContent = '📷';
+  }
+  
+  function trimBottom(c) {
+    var ctx = c.getContext('2d');
+    var imgData = ctx.getImageData(0, 0, c.width, c.height);
+    var lastRow = c.height;
+    for (var y = c.height - 1; y >= 0; y -= 2) {
       var has = false;
-      for (var x = 0; x < finalCanvas.width; x += 2) {
-        var i2 = (y * finalCanvas.width + x) * 4;
-        if (px2.data[i2] > 15 || px2.data[i2+1] > 15 || px2.data[i2+2] > 15) {
+      for (var x = 0; x < c.width; x += 2) {
+        var idx = (y * c.width + x) * 4;
+        if (imgData.data[idx] > 20 || imgData.data[idx+1] > 20 || imgData.data[idx+2] > 20) {
           has = true; break;
         }
       }
       if (has) break;
-      lastRow2 = y;
+      lastRow = y;
     }
-    if (lastRow2 < finalCanvas.height) {
-      var t2 = document.createElement('canvas');
-      t2.width = finalCanvas.width;
-      t2.height = lastRow2 + 2;
-      t2.getContext('2d').drawImage(finalCanvas, 0, 0);
-      finalCanvas = t2;
+    if (lastRow < c.height) {
+      var t = document.createElement('canvas');
+      t.width = c.width;
+      t.height = lastRow + 4;
+      t.getContext('2d').drawImage(c, 0, 0);
+      return t;
     }
-    
-    // 保存/复制
-    finalCanvas.toBlob(async function(blob) {
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': blob })
-        ]);
-        showToast('✅', '已复制到剪贴板', '粘贴即可分享');
-      } catch (e) {
-        var link = document.createElement('a');
-        link.download = '北京车展2026.png';
-        link.href = finalCanvas.toDataURL('image/png');
-        link.click();
-        showToast('📥', '长图已下载', '剪贴板不可用，已保存为图片文件');
-      }
-    }, 'image/png');
-
-  } catch (e) {
-    showToast('❌', '生成失败', '请重试或截图');
-    console.error(e);
+    return c;
   }
 
-  btn.classList.remove('saving');
-  btn.textContent = '📷';
+  function saveOrCopy(dataUrl) {
+    // 尝试剪贴板
+    var img = new Image();
+    img.onload = function() {
+      var tempCanvas = document.createElement('canvas');
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
+      tempCanvas.getContext('2d').drawImage(img, 0, 0);
+      tempCanvas.toBlob(function(blob) {
+        if (navigator.clipboard && navigator.clipboard.write) {
+          try {
+            navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ]).then(function() {
+              showToast('✅', '已复制到剪贴板', '粘贴即可分享');
+            }).catch(function() {
+              download();
+            });
+          } catch(e) {
+            download();
+          }
+        } else {
+          download();
+        }
+      }, 'image/png');
+    };
+    img.src = dataUrl;
+    
+    function download() {
+      var link = document.createElement('a');
+      link.download = '北京车展2026.png';
+      link.href = dataUrl;
+      link.click();
+      showToast('📥', '长图已下载', '已保存为图片文件');
+    }
+  }
+}
+
+// 检查库是否加载完成
+function checkLibs(cb) {
+  function check() {
+    if (typeof domtoimage !== 'undefined') {
+      cb();
+    } else {
+      setTimeout(check, 200);
+    }
+  }
+  check();
 }
 
 // Hide button on scroll? No, keep it always visible
